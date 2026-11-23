@@ -1,0 +1,19 @@
+modules:
+  jira:adminPage:
+    - key: parallel-hello-world-admin-page
+      resource: main
+      resolver:
+        function: resolver
+      title: parallel
+  function:
+    - key: resolver
+      handler: index.handler
+resources:
+  - key: main
+    path: static/hello-world/build
+app:
+  runtime:
+    name: nodejs24.x
+    memoryMB: 256
+    architecture: arm64
+  id: ari:cloud:ecosystem::app/ac789d81-c5ba-49de-86d0-9e591bc6ebca
