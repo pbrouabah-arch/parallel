@@ -1,3 +1,4 @@
+
 modules:
   jira:adminPage:
     - key: parallel-hello-world-admin-page
@@ -5,12 +6,19 @@ modules:
       resolver:
         function: resolver
       title: parallel
+
   function:
     - key: resolver
       handler: index.handler
+
 resources:
   - key: main
     path: static/hello-world/build
+
+permissions:
+  scopes:
+    - read:jira-work
+
 app:
   runtime:
     name: nodejs24.x
