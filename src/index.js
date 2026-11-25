@@ -9,9 +9,69 @@ resolver.define('getText', () => {
     return 'Hello, world!';
 });
 
-// Fetch real Jira issues from the PAR project
-resolver.define('getJiraIssues', async () => {
+// Fetch available Jira projects
+resolver.define('getJiraProjects', async () => {
     try {
+        const response = await api.asApp().requestJira(
+            route`/rest/api/3/project/search?maxResults=50&orderBy=name`,
+            {
+                headers: {
+                    Accept: 'application/json',
+                },
+            }
+        );
+
+        if (!response.ok) {
+            const errorDetails = await response.text();
+
+            console.error(
+                'Jira projects API error:',
+                response.status,
+                errorDetails
+            );
+
+            return {
+                success: false,
+                message: `Jira API returned status ${response.status}`,
+            };
+        }
+
+        const data = await response.json();
+
+        const projects = (data.values || []).map((project) => ({
+            id: project.id,
+            key: project.key,
+            name: project.name,
+            projectTypeKey: project.projectTypeKey ?? null,
+        }));
+
+        return {
+            success: true,
+            total: projects.length,
+            projects,
+        };
+    } catch (error) {
+        console.error('getJiraProjects failed:', error);
+
+        return {
+            success: false,
+            message: 'Unable to retrieve Jira projects.',
+        };
+    }
+});
+
+// Fetch Jira issues for a dynamically selected project
+resolver.define('getJiraIssues', async ({ payload }) => {
+    try {
+        const projectKey = payload?.projectKey?.trim().toUpperCase();
+
+        if (!projectKey || !/^[A-Z][A-Z0-9_]*$/.test(projectKey)) {
+            return {
+                success: false,
+                message: 'A valid projectKey is required.',
+            };
+        }
+
         const response = await api.asApp().requestJira(
             route`/rest/api/3/search/jql`,
             {
@@ -21,7 +81,7 @@ resolver.define('getJiraIssues', async () => {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    jql: 'project = PAR ORDER BY created DESC',
+                    jql: `project = ${projectKey} ORDER BY created DESC`,
                     maxResults: 50,
                     fields: [
                         'summary',
@@ -41,7 +101,7 @@ resolver.define('getJiraIssues', async () => {
             const errorDetails = await response.text();
 
             console.error(
-                'Jira API error:',
+                'Jira issues API error:',
                 response.status,
                 errorDetails
             );
@@ -69,6 +129,7 @@ resolver.define('getJiraIssues', async () => {
 
         return {
             success: true,
+            projectKey,
             total: issues.length,
             issues,
         };
